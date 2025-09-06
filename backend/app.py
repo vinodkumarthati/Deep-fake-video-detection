@@ -1,0 +1,72 @@
+# app.py
+import os
+import uuid
+import traceback
+from flask import Flask, request, jsonify, send_file
+from werkzeug.utils import secure_filename
+from config import UPLOAD_DIR, ALLOWED_EXTENSIONS, SAMPLE_EVERY_N_FRAMES, MAX_FRAMES, THUMBNAIL_SIZE
+from video_utils import allowed_file, sample_frames, frame_to_base64_bgr
+from detector import DeepfakeDetector
+
+app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload
+
+# Lazy load detector (so app starts even if model missing)
+detector = None
+def get_detector():
+    global detector
+    if detector is None:
+        detector = DeepfakeDetector()
+    return detector
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "no file part"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "no selected file"}), 400
+        if not allowed_file(file.filename, ALLOWED_EXTENSIONS):
+            return jsonify({"error": f"allowed extensions: {ALLOWED_EXTENSIONS}"}), 400
+
+        filename = secure_filename(file.filename)
+        uid = str(uuid.uuid4())[:8]
+        saved_name = f"{uid}_{filename}"
+        saved_path = os.path.join(UPLOAD_DIR, saved_name)
+        file.save(saved_path)
+
+        # sample frames
+        frames = sample_frames(saved_path, every_n=SAMPLE_EVERY_N_FRAMES, max_frames=MAX_FRAMES, resize=(256,256))
+        if not frames:
+            return jsonify({"error": "no frames extracted"}), 400
+
+        det = get_detector()
+        scores = det.predict_frames(frames)
+        agg = det.aggregate(scores)
+
+        # prepare sample thumbnails (first 6 frames)
+        thumbnails = []
+        for i, f in enumerate(frames[:6]):
+            thumbnails.append({"index": i, "img_b64": frame_to_base64_bgr(f), "score": scores[i] if i < len(scores) else None})
+
+        response = {
+            "filename": filename,
+            "num_frames": len(frames),
+            "frame_scores": scores,
+            "aggregate": agg,
+            "thumbnails": thumbnails
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    # debug run
+    app.run(host="0.0.0.0", port=8000, debug=True)

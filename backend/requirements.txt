@@ -1,1 +1,10 @@
 Add backend technologies
+flask
+werkzeug
+opencv-python
+numpy
+Pillow
+tensorflow==2.12.0   # only if using Keras model; remove if not needed
+torch               # only if using PyTorch model
+onnxruntime         # only if using ONNX model
+onnx
