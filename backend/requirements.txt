@@ -1,4 +1,4 @@
-Add backend technologies
+#Add backend technologies
 flask
 werkzeug
 opencv-python
