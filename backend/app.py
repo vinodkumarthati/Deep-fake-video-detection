@@ -2,12 +2,14 @@ import os
 import uuid
 import traceback
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from config import UPLOAD_DIR, ALLOWED_EXTENSIONS, SAMPLE_EVERY_N_FRAMES, MAX_FRAMES, MODEL_NAMES
 from video_utils import allowed_file, sample_frames, frame_to_base64_bgr
 from detector import DeepfakeDetector
 
 app = Flask(__name__)
+CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload
 
 # Lazy load detectors dictionary for all models

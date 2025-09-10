@@ -4,26 +4,54 @@ import { useNavigate } from "react-router-dom";
 function UploadPage() {
   const [file, setFile] = useState(null);
   const [option, setOption] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  const handleAnalyze = () => {
-    const isReal = Math.random() > 0.5;
+  const handleAnalyze = async () => {
+    if (!file || !option) return;
+    setLoading(true);
 
-    // Fake analysis data
-    const analysis = {
-      face: 89,
-      temporal: 82,
-      artifact: 80,
-      lipsync: 80,
-    };
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("model_name", option); // send selected model
 
-    navigate("/result", {
-      state: { fileName: file?.name, isReal, option, analysis },
-    });
+      const res = await fetch("http://localhost:8000/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Navigate with backend results
+        navigate("/result", {
+          state: {
+            fileName: data.filename,
+            isReal: data.aggregate.mean < 0.5, // mean score threshold
+            option,
+            analysis: {
+              face: Math.round(data.aggregate.mean * 100),
+              temporal: Math.round(data.aggregate.median * 100),
+              artifact: Math.round(data.aggregate.majority_ratio * 100),
+              lipsync: Math.round(data.aggregate.mean * 100), // example reuse
+            },
+            thumbnails: data.thumbnails.slice(0, 10), // first 10 frames
+          },
+        });
+      } else {
+        alert("Error: " + (data.error || "Something went wrong"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to analyze video.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,17 +71,17 @@ function UploadPage() {
             onChange={(e) => setOption(e.target.value)}
           >
             <option value="">-- Choose an option --</option>
-            <option value="basic">Basic Analysis</option>
-            <option value="advanced">Advanced Analysis</option>
-            <option value="frame">Frame-by-Frame Analysis</option>
+            <option value="xception">Xception model</option>
+            <option value="ffpp_c23">ffpp_c23 model</option>
+            <option value="ffpp_c40">ffpp_c40 model</option>
           </select>
         </div>
         <button
           onClick={handleAnalyze}
-          disabled={!file || !option}
+          disabled={!file || !option || loading}
           className="btn"
         >
-          Analyze Video
+          {loading ? "Analyzing..." : "Analyze Video"}
         </button>
       </div>
     </div>

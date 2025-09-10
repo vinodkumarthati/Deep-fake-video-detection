@@ -16,17 +16,21 @@ function ResultPage() {
     );
   }
 
-  const { fileName, isReal, option, analysis } = state;
+  const { fileName, isReal, option, analysis, thumbnails } = state;
 
   return (
     <div className="container">
       <h1 className="title">Analysis Result</h1>
 
       <div className="result-box">
-        <p><strong>Video:</strong> {fileName}</p>
-        <p><strong>Analysis Type:</strong> {option}</p>
         <p>
-          Status:{" "}
+          <strong>Video:</strong> {fileName}
+        </p>
+        <p>
+          <strong>Model Used:</strong> {option}
+        </p>
+        <p>
+          <strong>Status:</strong>{" "}
           <span style={{ color: isReal ? "limegreen" : "red" }}>
             {isReal ? "Likely Authentic" : "Likely Fake"}
           </span>
@@ -52,6 +56,20 @@ function ResultPage() {
           <label>Lip Sync Analysis</label>
           <progress value={analysis.lipsync} max="100"></progress>
           <span>{analysis.lipsync}%</span>
+        </div>
+
+        <h2>Frame Samples</h2>
+        <div className="frame-grid">
+          {thumbnails?.map((thumb, idx) => (
+            <div key={idx} className="frame-card">
+              <img
+                src={`data:image/jpeg;base64,${thumb.img_b64}`}
+                alt={`frame-${idx}`}
+              />
+              <p>Frame {thumb.index}</p>
+              <p>Score: {(thumb.score * 100).toFixed(2)}%</p>
+            </div>
+          ))}
         </div>
 
         <button className="btn" onClick={() => navigate("/")}>
