@@ -10,12 +10,18 @@ UPLOAD_DIR = os.path.join(BACKEND_DIR, "uploads")
 
 # Folder containing .pt models
 PT_MODELS_DIR = os.path.join(PROJECT_ROOT, "model", "pt_models")
-PT_MODELS_DIR = os.path.abspath(PT_MODELS_DIR)  # ensure absolute path
+PT_MODELS_DIR = os.path.abspath(PT_MODELS_DIR)
 
-# List of available models (without .pt)
-MODEL_NAMES = ["xception", "ffpp_c23", "ffpp_c40"]
-MODEL_PATHS = {name: os.path.join(PT_MODELS_DIR, f"{name}.pt") for name in MODEL_NAMES}
+# Define models (only EfficientNet now)
+MODEL_PATHS = {
+    "efficientnet_ffpp": {
+        "path": os.path.join(PT_MODELS_DIR, "efficientnet_ffpp.pt"),  # ✅ matches your file
+        "arch": "efficientnet",
+    }
+}
 
 ALLOWED_EXTENSIONS = {"mp4", "mov", "avi", "mkv"}
 SAMPLE_EVERY_N_FRAMES = 15
 MAX_FRAMES = 40
+BATCH_SIZE = 8
+MODEL_NAMES = list(MODEL_PATHS.keys())  # ["efficientnet_ffpp"]

@@ -71,9 +71,8 @@ function UploadPage() {
             onChange={(e) => setOption(e.target.value)}
           >
             <option value="">-- Choose an option --</option>
-            <option value="xception">Xception model</option>
-            <option value="ffpp_c23">ffpp_c23 model</option>
-            <option value="ffpp_c40">ffpp_c40 model</option>
+            <option value="efficientnet_ffpp">efficientnet_ffpp model</option>
+            
           </select>
         </div>
         <button

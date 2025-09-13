@@ -4,9 +4,11 @@ import traceback
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from config import UPLOAD_DIR, ALLOWED_EXTENSIONS, SAMPLE_EVERY_N_FRAMES, MAX_FRAMES, MODEL_NAMES
+from config import UPLOAD_DIR, ALLOWED_EXTENSIONS, SAMPLE_EVERY_N_FRAMES, MAX_FRAMES, MODEL_NAMES, MODEL_PATHS
 from video_utils import allowed_file, sample_frames, frame_to_base64_bgr
 from detector import DeepfakeDetector
+import torch
+
 
 app = Flask(__name__)
 CORS(app)
@@ -16,16 +18,16 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload
 detectors = {}
 
 def get_detector(model_name):
-    """
-    Return a DeepfakeDetector instance for the requested model.
-    Lazy-load and cache to avoid reloading every request.
-    """
     global detectors
-    if model_name not in MODEL_NAMES:
-        raise ValueError(f"Unknown model '{model_name}'. Available: {MODEL_NAMES}")
     if model_name not in detectors:
-        detectors[model_name] = DeepfakeDetector(model_name=model_name)
+        if model_name not in MODEL_PATHS:
+            raise ValueError(f"Unknown model '{model_name}'. Available: {MODEL_NAMES}")
+        detectors[model_name] = DeepfakeDetector(
+            model_path=MODEL_PATHS[model_name]["path"], 
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
     return detectors[model_name]
+
 
 @app.route("/health", methods=["GET"])
 def health():
