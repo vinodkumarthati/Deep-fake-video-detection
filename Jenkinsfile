@@ -72,7 +72,7 @@ pipeline {
 
   post {
     always {
-        node('master') {   // or your agent label
+        node {   // or your agent label
             echo "Cleaning up workspace..."
             deleteDir()
         }
