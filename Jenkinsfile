@@ -1,12 +1,22 @@
 pipeline {
     agent any
     tools {
-        nodejs 'NodeJS'  // Make sure this matches the name in Jenkins configuration
+        nodejs 'NodeJS'
     }
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+        
+        stage('Check Files') {
+            steps {
+                script {
+                    // List all files in the workspace to see what's actually there
+                    bat 'dir /B'
+                    bat 'tree /F /A'
+                }
             }
         }
         
@@ -36,7 +46,7 @@ pipeline {
     }
     post {
         always {
-            cleanWs()  // Use cleanWs instead of deleteDir for better workspace cleanup
+            cleanWs()
         }
         failure {
             emailext (
