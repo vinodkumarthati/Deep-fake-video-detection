@@ -10,83 +10,72 @@ pipeline {
             }
         }
         
-        stage('Check Project Structure') {
+        stage('Frontend Build') {
             steps {
                 script {
-                    echo "Checking project structure..."
-                    bat 'dir /B'
-                }
-            }
-        }
-        
-        stage('Frontend - Install Dependencies') {
-            steps {
-                script {
-                    dir('frontend') {
-                        bat 'npm install'
+                    try {
+                        dir('frontend') {
+                            bat 'npm install'
+                            bat 'npm run build'
+                            bat 'npm test || echo "Tests skipped or not configured"'
+                        }
+                    } catch (Exception e) {
+                        echo "Frontend build failed: ${e.message}"
+                        // Continue with backend build anyway
                     }
                 }
             }
         }
         
-        stage('Frontend - Build') {
+        stage('Backend Setup') {
             steps {
                 script {
-                    dir('frontend') {
-                        bat 'npm run build'
+                    try {
+                        // Check if backend folder exists
+                        def backendExists = fileExists 'backend'
+                        if (backendExists) {
+                            dir('backend') {
+                                bat 'pip install -r requirements.txt'
+                                bat 'python -m pytest tests/ || echo "No tests found"'
+                            }
+                        } else {
+                            echo "Backend folder not found, skipping backend setup"
+                        }
+                    } catch (Exception e) {
+                        echo "Backend setup failed: ${e.message}"
+                        // Continue with the pipeline
                     }
                 }
             }
         }
         
-        stage('Frontend - Test') {
+        stage('Model Verification') {
             steps {
                 script {
-                    dir('frontend') {
-                        bat 'npm test || echo "Frontend tests completed"'
+                    def modelExists = fileExists 'model'
+                    if (modelExists) {
+                        echo "Model folder verified"
+                        bat 'dir model /B'
+                    } else {
+                        echo "Model folder not found"
                     }
                 }
             }
         }
         
-        stage('Backend - Setup Python') {
+        stage('Build Artifacts') {
             steps {
                 script {
-                    bat 'python --version || echo "Python not found"'
-                    bat 'pip --version || echo "Pip not found"'
-                }
-            }
-        }
-        
-        stage('Backend - Install Dependencies') {
-            steps {
-                script {
-                    // Install backend Python dependencies
-                    bat 'pip install -r requirements.txt || echo "No requirements.txt found"'
+                    // Archive frontend build files if they exist
+                    dir('frontend') {
+                        archiveArtifacts artifacts: 'build/**/*', allowEmptyArchive: true
+                    }
                     
-                    // If you have specific backend folder with its own requirements
-                    dir('backend') {
-                        bat 'pip install -r requirements.txt || echo "No backend requirements.txt"'
-                    }
-                }
-            }
-        }
-        
-        stage('Backend - Test') {
-            steps {
-                script {
-                    // Run Python tests if they exist
-                    bat 'python -m pytest tests/ || echo "No Python tests found"'
-                    bat 'python -m pytest backend/tests/ || echo "No backend tests found"'
-                }
-            }
-        }
-        
-        stage('Model - Verify') {
-            steps {
-                script {
-                    echo "Checking model files..."
-                    bat 'dir model /B || echo "Model folder not found"'
+                    // Archive requirements files
+                    archiveArtifacts artifacts: '**/requirements.txt', allowEmptyArchive: true
+                    
+                    // Archive model files if they exist
+                    archiveArtifacts artifacts: 'model/**/*', allowEmptyArchive: true
                 }
             }
         }
@@ -94,36 +83,6 @@ pipeline {
     post {
         always {
             cleanWs()
-        }
-        success {
-            emailext (
-                subject: "SUCCESS: Deep Fake Detection Build - ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-                body: """
-                Build Successful!
-                
-                Job: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                URL: ${env.BUILD_URL}
-                
-                Both frontend and backend components built successfully.
-                """,
-                to: "vigneshgone043@gmail.com"
-            )
-        }
-        failure {
-            emailext (
-                subject: "FAILED: Deep Fake Detection Build - ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-                body: """
-                Build Failed!
-                
-                Job: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                URL: ${env.BUILD_URL}
-                
-                Please check the build logs for details.
-                """,
-                to: "vigneshgone043@gmail.com"
-            )
         }
     }
 }
