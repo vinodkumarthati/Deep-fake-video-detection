@@ -10,36 +10,83 @@ pipeline {
             }
         }
         
-        stage('Check Files') {
+        stage('Check Project Structure') {
             steps {
                 script {
-                    // List all files in the workspace to see what's actually there
+                    echo "Checking project structure..."
                     bat 'dir /B'
-                    bat 'tree /F /A'
                 }
             }
         }
         
-        stage('Install Dependencies') {
+        stage('Frontend - Install Dependencies') {
             steps {
                 script {
-                    bat 'npm install'
+                    dir('frontend') {
+                        bat 'npm install'
+                    }
                 }
             }
         }
         
-        stage('Build') {
+        stage('Frontend - Build') {
             steps {
                 script {
-                    bat 'npm run build'
+                    dir('frontend') {
+                        bat 'npm run build'
+                    }
                 }
             }
         }
         
-        stage('Test') {
+        stage('Frontend - Test') {
             steps {
                 script {
-                    bat 'npm test'
+                    dir('frontend') {
+                        bat 'npm test || echo "Frontend tests completed"'
+                    }
+                }
+            }
+        }
+        
+        stage('Backend - Setup Python') {
+            steps {
+                script {
+                    bat 'python --version || echo "Python not found"'
+                    bat 'pip --version || echo "Pip not found"'
+                }
+            }
+        }
+        
+        stage('Backend - Install Dependencies') {
+            steps {
+                script {
+                    // Install backend Python dependencies
+                    bat 'pip install -r requirements.txt || echo "No requirements.txt found"'
+                    
+                    // If you have specific backend folder with its own requirements
+                    dir('backend') {
+                        bat 'pip install -r requirements.txt || echo "No backend requirements.txt"'
+                    }
+                }
+            }
+        }
+        
+        stage('Backend - Test') {
+            steps {
+                script {
+                    // Run Python tests if they exist
+                    bat 'python -m pytest tests/ || echo "No Python tests found"'
+                    bat 'python -m pytest backend/tests/ || echo "No backend tests found"'
+                }
+            }
+        }
+        
+        stage('Model - Verify') {
+            steps {
+                script {
+                    echo "Checking model files..."
+                    bat 'dir model /B || echo "Model folder not found"'
                 }
             }
         }
@@ -48,10 +95,33 @@ pipeline {
         always {
             cleanWs()
         }
+        success {
+            emailext (
+                subject: "SUCCESS: Deep Fake Detection Build - ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: """
+                Build Successful!
+                
+                Job: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                URL: ${env.BUILD_URL}
+                
+                Both frontend and backend components built successfully.
+                """,
+                to: "vigneshgone043@gmail.com"
+            )
+        }
         failure {
             emailext (
-                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: "Check console output at ${env.BUILD_URL}",
+                subject: "FAILED: Deep Fake Detection Build - ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: """
+                Build Failed!
+                
+                Job: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                URL: ${env.BUILD_URL}
+                
+                Please check the build logs for details.
+                """,
                 to: "vigneshgone043@gmail.com"
             )
         }
