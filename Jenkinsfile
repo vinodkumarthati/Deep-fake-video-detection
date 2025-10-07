@@ -73,9 +73,7 @@ pipeline {
   post {
     always {
       echo "Cleaning up workspace..."
-      node {
         deleteDir()
-      }
     }
   }
 }   // 👈 This closing brace was missing
