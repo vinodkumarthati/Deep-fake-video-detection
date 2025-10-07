@@ -72,8 +72,9 @@ pipeline {
 
   post {
     always {
-      echo "Cleaning up workspace..."
-        deleteDir()
+        node('master') {   // or your agent label
+            echo "Cleaning up workspace..."
+            deleteDir()
+        }
     }
-  }
-}   // 👈 This closing brace was missing
+}
