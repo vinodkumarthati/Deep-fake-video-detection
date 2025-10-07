@@ -65,18 +65,17 @@ pipeline {
       when { branch 'main' }
       steps {
         echo "Deploying to server..."
-        // You can replace this with actual deployment commands:
         sh 'echo "Deploying app..."'
       }
     }
   }
 
-
-post {
-  always {
-    echo "Cleaning up workspace..."
-    node {
-      deleteDir()
+  post {
+    always {
+      echo "Cleaning up workspace..."
+      node {
+        deleteDir()
+      }
     }
   }
-}
+}   // 👈 This closing brace was missing
