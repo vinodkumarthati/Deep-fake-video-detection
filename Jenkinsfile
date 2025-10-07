@@ -42,7 +42,7 @@ pipeline {
             emailext (
                 subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                 body: "Check console output at ${env.BUILD_URL}",
-                to: "vigneshgone043@example.com"
+                to: "vigneshgone043@gmail.com"
             )
         }
     }
