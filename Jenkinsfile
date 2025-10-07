@@ -1,84 +1,49 @@
 pipeline {
-    agent any  // Use any available agent
-
-    environment {
-        // Adjust the NodeJS tool name to match your Jenkins configuration
-        NODE_HOME = tool name: 'NodeJS', type: 'NodeJSInstallation'
-        PATH = "${NODE_HOME}/bin:${env.PATH}"
-        PYTHON = 'C:\\Python39\\python.exe' // Change if needed
+    agent any
+    tools {
+        nodejs 'NodeJS'  // Make sure this matches the name in Jenkins configuration
     }
-
     stages {
-
         stage('Checkout') {
             steps {
-                echo "Checking out source code..."
                 checkout scm
             }
         }
-
-        stage('Backend Setup') {
+        
+        stage('Install Dependencies') {
             steps {
-                dir('backend') {
-                    echo "Setting up Python environment..."
-                    bat "${env.PYTHON} -m venv venv"
-                    bat "venv\\Scripts\\activate && pip install -r ..\\requirements.txt"
+                script {
+                    bat 'npm install'
                 }
             }
         }
-
-        stage('Model Validation') {
+        
+        stage('Build') {
             steps {
-                dir('model') {
-                    echo "Running basic model check..."
-                    bat "python verify_model.py || echo No verification script found"
+                script {
+                    bat 'npm run build'
                 }
             }
         }
-
-        stage('Frontend Build') {
+        
+        stage('Test') {
             steps {
-                dir('frontend') {
-                    echo "Installing and building frontend..."
-                    bat "npm install"
-                    bat "npm run build"
+                script {
+                    bat 'npm test'
                 }
-            }
-        }
-
-        stage('Backend Tests') {
-            steps {
-                dir('backend') {
-                    echo "Running backend tests..."
-                    bat "venv\\Scripts\\activate && pytest || echo No tests found"
-                }
-            }
-        }
-
-        stage('Package Artifacts') {
-            steps {
-                echo "Packaging build artifacts..."
-                bat "tar -czf build_artifacts.tar.gz frontend\\dist backend\\venv model"
-                archiveArtifacts artifacts: 'build_artifacts.tar.gz', allowEmptyArchive: true
-            }
-        }
-
-        stage('Deploy') {
-            when { branch 'main' }
-            steps {
-                echo "Deploying to server..."
-                bat "echo Deploying app..."
             }
         }
     }
-
     post {
-    always {
-        echo "Cleaning up workspace..."
-        script {
-            deleteDir()  // Runs safely with node context
+        always {
+            cleanWs()  // Use cleanWs instead of deleteDir for better workspace cleanup
+        }
+        failure {
+            emailext (
+                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: "Check console output at ${env.BUILD_URL}",
+                to: "your-email@example.com"
+            )
         }
     }
-}
-
 }
