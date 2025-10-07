@@ -73,9 +73,12 @@ pipeline {
     }
 
     post {
-        always {
-            echo "Cleaning up workspace..."
-            deleteDir()  // Runs on the agent automatically
+    always {
+        echo "Cleaning up workspace..."
+        script {
+            deleteDir()  // Runs safely with node context
         }
     }
+}
+
 }
