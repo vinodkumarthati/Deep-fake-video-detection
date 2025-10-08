@@ -15,9 +15,9 @@ pipeline {
                 script {
                     try {
                         dir('frontend') {
-                            bat 'npm install'
-                            bat 'npm run build'
-                            bat 'npm test || echo "Tests skipped or not configured"'
+                            sh 'npm install'
+                            sh 'npm run build'
+                            sh 'npm test || echo "Tests skipped or not configured"'
                         }
                     } catch (Exception e) {
                         echo "Frontend build failed: ${e.message}"
@@ -35,8 +35,8 @@ pipeline {
                         def backendExists = fileExists 'backend'
                         if (backendExists) {
                             dir('backend') {
-                                bat 'pip install -r requirements.txt'
-                                bat 'python -m pytest tests/ || echo "No tests found"'
+                                sh 'pip install -r requirements.txt'
+                                sh 'python -m pytest tests/ || echo "No tests found"'
                             }
                         } else {
                             echo "Backend folder not found, skipping backend setup"
@@ -55,7 +55,7 @@ pipeline {
                     def modelExists = fileExists 'model'
                     if (modelExists) {
                         echo "Model folder verified"
-                        bat 'dir model /B'
+                        sh 'dir model /B'
                     } else {
                         echo "Model folder not found"
                     }
