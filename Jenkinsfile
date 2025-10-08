@@ -44,7 +44,7 @@ pipeline {
         stage('Model Verification') {
             steps {
                 script {
-                    if (fileExists('backend/model')) {
+                    if (fileExists('model')) {
                         echo '✅ Model folder verified'
                     } else {
                         error('❌ Model folder missing!')
