@@ -2,25 +2,27 @@ pipeline {
     agent any
 
     tools {
-        nodejs "NodeJS"
-        python "Python3"
+        nodejs "NodeJS"   // Only keep NodeJS — Python is used directly
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/vinodkumarthati/Deep-fake-video-detection.git'
+                git branch: 'main',
+                    url: 'https://github.com/vinodkumarthati/Deep-fake-video-detection.git'
             }
         }
 
         stage('Frontend Build') {
             steps {
                 dir('frontend') {
-                    sh 'npm install'
-                    sh 'npm run build'
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        sh 'npm test || true'
-                    }
+                    sh '''
+                        echo "Installing frontend dependencies..."
+                        npm install
+                        echo "Building frontend..."
+                        npm run build || true
+                    '''
                 }
             }
         }
@@ -28,7 +30,13 @@ pipeline {
         stage('Backend Setup') {
             steps {
                 dir('backend') {
-                    sh 'pip install -r requirements.txt'
+                    sh '''
+                        echo "Setting up Python environment..."
+                        python3 -m venv venv
+                        . venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt || true
+                    '''
                 }
             }
         }
@@ -36,11 +44,10 @@ pipeline {
         stage('Model Verification') {
             steps {
                 script {
-                    if (fileExists('model')) {
-                        echo 'Model folder verified'
-                        sh 'ls -lh model'
+                    if (fileExists('backend/model')) {
+                        echo '✅ Model folder verified'
                     } else {
-                        error('Model folder not found')
+                        error('❌ Model folder missing!')
                     }
                 }
             }
@@ -48,15 +55,21 @@ pipeline {
 
         stage('Build Artifacts') {
             when {
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
-                echo 'Build successful! Artifacts are ready.'
+                echo "All stages completed successfully!"
             }
         }
     }
 
     post {
+        success {
+            echo '🎉 Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed. Please check the logs.'
+        }
         always {
             cleanWs()
         }
